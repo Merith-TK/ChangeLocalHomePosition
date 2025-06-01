@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Elements.Core;
 using FrooxEngine;
@@ -33,57 +32,65 @@ namespace ChangeLocalHomePosition
             new Harmony("xyz.merith.ChangeLocalHomePosition").PatchAll();
         }
 
+        public static void Msg(string message) =>
+            UniLog.Log("[ChangeLocalHomePosition] " + message);
+
         [HarmonyPatch(typeof(WorldPresets), nameof(WorldPresets.LocalWorld))]
-        class LocalHomeAlternateFilePatch
+        public static class LocalWorldOverridePatch
         {
-            public static IEnumerable<CodeInstruction> Transpiler(
-                IEnumerable<CodeInstruction> codes
-            )
+            public static bool Prefix(World w)
             {
-                foreach (var code in codes)
-                {
-                    yield return code;
-                    if (code.Is(OpCodes.Ldstr, "Local.bin"))
-                    {
-                        yield return new(
-                            OpCodes.Call,
-                            typeof(LocalHomeAlternateFilePatch).GetMethod(nameof(GetValidHomePath))
-                        );
-                    }
-                }
-            }
+                if (!config.GetValue(KEY_ENABLE))
+                    return true; // Run original method
 
-            public static string GetValidHomePath(string orig)
-            {
-                string dataPath = Path.Combine(Engine.Current.DataPath, "LocalHome.bin");
+                string customPath = Path.Combine(w.Engine.DataPath, "LocalHome.bin");
 
-                if (!File.Exists(dataPath))
+                if (!File.Exists(customPath))
                 {
                     string originalPath = Path.Combine(
-                        Engine.Current.AppPath,
+                        w.Engine.AppPath,
                         "RuntimeData",
                         "Local.bin"
                     );
                     if (File.Exists(originalPath))
                     {
-                        File.Copy(originalPath, dataPath);
+                        File.Copy(originalPath, customPath);
                         Msg("Copied default Local.bin to LocalHome.bin");
                     }
                     else
                     {
-                        Msg("Default Local.bin not found. Using fallback.");
+                        Msg("Default Local.bin not found. Cannot load LocalHome.");
+                        return false;
                     }
                 }
 
-                if (File.Exists(dataPath))
-                    return dataPath;
+                try
+                {
+                    using FileStream stream = File.OpenRead(customPath);
+                    DataTreeDictionary node = DataTreeConverter.LoadAuto(stream);
+                    LoadControl loadControl = new LoadControl(
+                        w,
+                        new ReferenceTranslator(),
+                        Engine.Version,
+                        null
+                    );
+                    loadControl.SetLoadRoot(w);
+                    w.Load(node, loadControl);
+                    Msg("Successfully loaded LocalHome.bin.");
+                }
+                catch (Exception ex)
+                {
+                    UniLog.Error(
+                        $"[ChangeLocalHomePosition] Failed to load custom LocalHome: {ex}"
+                    );
+                }
 
-                return orig;
+                return false; // Skip original method
             }
         }
 
         [HarmonyPatch(typeof(Userspace), nameof(Userspace.OpenLocalHomeAsync))]
-        class ChangeLocalHomePositionPatch
+        public static class ChangeLocalHomePositionPatch
         {
             public static bool Prefix(ref Task __result)
             {
@@ -92,7 +99,10 @@ namespace ChangeLocalHomePosition
 
                 __result = Task.Run(() =>
                 {
-                    var world = Userspace.StartUtilityWorld(WorldPresets.LocalHome());
+                    // TODO: Potentially create a custom "preset" for the local home?
+                    // the reasoning is that the preset here just direct loads from Local.bin
+                    // so in theory?
+                    var world = Userspace.StartUtilityWorld(CustomLocalWorld());
                     world.AssignNewRecord("M-" + world.Engine.LocalDB.MachineID, "R-Home");
                     world.CorrespondingRecord.Name = "Local";
                     world.Name = world.CorrespondingRecord.Name;
@@ -101,6 +111,17 @@ namespace ChangeLocalHomePosition
 
                 return false;
             }
+        }
+
+        // Taken from the original LocalWorld method
+        [HarmonyPatch(typeof(WorldPresets), nameof(WorldPresets.LocalWorld))]
+        public static void CustomLocalWorld(World w)
+        {
+            using FileStream stream = File.OpenRead(Path.Combine(w.Engine.DataPath, "LocalHome.bin"));
+            DataTreeDictionary node = DataTreeConverter.LoadAuto(stream);
+            LoadControl loadControl = new LoadControl(w, new ReferenceTranslator(), Engine.Version, null);
+            loadControl.SetLoadRoot(w);
+            w.Load(node, loadControl);
         }
     }
 }

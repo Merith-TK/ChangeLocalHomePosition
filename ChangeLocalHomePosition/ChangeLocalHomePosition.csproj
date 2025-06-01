@@ -35,6 +35,12 @@
     <Reference Include="FrooxEngine.Store">
       <HintPath>$(GamePath)Resonite_Data\Managed\FrooxEngine.Store.dll</HintPath>
     </Reference>
+    <Reference Include="Skyfrost.Base">
+      <HintPath>$(GamePath)Resonite_Data\Managed\Skyfrost.Base.dll</HintPath>
+    </Reference>
+    <Reference Include="Skyfrost.Base.Models">
+      <HintPath>$(GamePath)Resonite_Data\Managed\Skyfrost.Base.Models.dll</HintPath>
+    </Reference>
     <Reference Include="ResoniteModLoader">
       <HintPath>$(GamePath)ResoniteModLoader.dll</HintPath>
       <HintPath>$(GamePath)Libraries\ResoniteModLoader.dll</HintPath>
