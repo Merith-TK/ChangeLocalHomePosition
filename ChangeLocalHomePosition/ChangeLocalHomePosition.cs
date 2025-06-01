@@ -1,14 +1,13 @@
-using HarmonyLib;
-using ResoniteModLoader;
 using System;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection.Emit;
+using System.Threading.Tasks;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.Store;
-using System.Reflection.Emit;
-using System.IO;
+using HarmonyLib;
+using ResoniteModLoader;
 
 namespace ChangeLocalHomePosition
 {
@@ -20,37 +19,65 @@ namespace ChangeLocalHomePosition
         public override string Link => "https://github.com/Merith-TK/ChangeLocalHomePosition/";
 
         [AutoRegisterConfigKey]
-        public static ModConfigurationKey<bool> KEY_ENABLE = new("enable", "If true local home will be reset every restart.", () => true);
+        public static ModConfigurationKey<bool> KEY_ENABLE = new(
+            "enable",
+            "If true local home will be loaded from a custom file.",
+            () => true
+        );
 
         public static ModConfiguration config;
+
         public override void OnEngineInit()
         {
             config = GetConfiguration();
-            Harmony harmony = new Harmony("xyz.merith.ChangeLocalHomePosition");
-            harmony.PatchAll();
-
+            new Harmony("xyz.merith.ChangeLocalHomePosition").PatchAll();
         }
 
         [HarmonyPatch(typeof(WorldPresets), nameof(WorldPresets.LocalWorld))]
         class LocalHomeAlternateFilePatch
         {
-            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+            public static IEnumerable<CodeInstruction> Transpiler(
+                IEnumerable<CodeInstruction> codes
+            )
             {
                 foreach (var code in codes)
                 {
                     yield return code;
                     if (code.Is(OpCodes.Ldstr, "Local.bin"))
-                        yield return new(OpCodes.Call, typeof(LocalHomeAlternateFilePatch).GetMethod(nameof(GetValidHomePath)));
+                    {
+                        yield return new(
+                            OpCodes.Call,
+                            typeof(LocalHomeAlternateFilePatch).GetMethod(nameof(GetValidHomePath))
+                        );
+                    }
                 }
             }
 
             public static string GetValidHomePath(string orig)
             {
-                var modPath = Path.Combine(Engine.Current.DataPath, "LocalHome.bin");
-                if (File.Exists(modPath))
+                string dataPath = Path.Combine(Engine.Current.DataPath, "LocalHome.bin");
+
+                if (!File.Exists(dataPath))
                 {
-                    return modPath;
+                    string originalPath = Path.Combine(
+                        Engine.Current.AppPath,
+                        "RuntimeData",
+                        "Local.bin"
+                    );
+                    if (File.Exists(originalPath))
+                    {
+                        File.Copy(originalPath, dataPath);
+                        Msg("Copied default Local.bin to LocalHome.bin");
+                    }
+                    else
+                    {
+                        Msg("Default Local.bin not found. Using fallback.");
+                    }
                 }
+
+                if (File.Exists(dataPath))
+                    return dataPath;
+
                 return orig;
             }
         }
@@ -60,7 +87,8 @@ namespace ChangeLocalHomePosition
         {
             public static bool Prefix(ref Task __result)
             {
-                if (!config.GetValue(KEY_ENABLE)) return true;
+                if (!config.GetValue(KEY_ENABLE))
+                    return true;
 
                 __result = Task.Run(() =>
                 {
