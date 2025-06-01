@@ -10,14 +10,14 @@ using FrooxEngine.Store;
 using System.Reflection.Emit;
 using System.IO;
 
-namespace AlwaysResetLocalHome
+namespace ChangeLocalHomePosition
 {
-    public class AlwaysResetLocalHome : ResoniteMod
+    public class ChangeLocalHomePosition : ResoniteMod
     {
-        public override string Name => "AlwaysResetLocalHome";
-        public override string Author => "art0007i";
+        public override string Name => "ChangeLocalHomePosition";
+        public override string Author => "merith.tk";
         public override string Version => "1.0.0";
-        public override string Link => "https://github.com/art0007i/AlwaysResetLocalHome/";
+        public override string Link => "https://github.com/Merith-TK/ChangeLocalHomePosition/";
 
         [AutoRegisterConfigKey]
         public static ModConfigurationKey<bool> KEY_ENABLE = new("enable", "If true local home will be reset every restart.", () => true);
@@ -26,7 +26,7 @@ namespace AlwaysResetLocalHome
         public override void OnEngineInit()
         {
             config = GetConfiguration();
-            Harmony harmony = new Harmony("me.art0007i.AlwaysResetLocalHome");
+            Harmony harmony = new Harmony("xyz.merith.ChangeLocalHomePosition");
             harmony.PatchAll();
 
         }
@@ -46,17 +46,17 @@ namespace AlwaysResetLocalHome
 
             public static string GetValidHomePath(string orig)
             {
-                var modPath = Path.Combine(Engine.Current.AppPath, "RuntimeData", "LocalModded.bin");
+                var modPath = Path.Combine(Engine.Current.DataPath, "LocalHome.bin");
                 if (File.Exists(modPath))
                 {
-                    return "LocalModded.bin";
+                    return modPath;
                 }
                 return orig;
             }
         }
 
         [HarmonyPatch(typeof(Userspace), nameof(Userspace.OpenLocalHomeAsync))]
-        class AlwaysResetLocalHomePatch
+        class ChangeLocalHomePositionPatch
         {
             public static bool Prefix(ref Task __result)
             {

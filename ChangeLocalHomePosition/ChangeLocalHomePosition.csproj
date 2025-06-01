@@ -3,8 +3,8 @@
     <ProjectGuid>{FFA93FA9-4040-46FF-8A1C-2A190C0CC235}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>AlwaysResetLocalHome</RootNamespace>
-    <AssemblyTitle>AlwaysResetLocalHome</AssemblyTitle>
+    <RootNamespace>ChangeLocalHomePosition</RootNamespace>
+    <AssemblyTitle>ChangeLocalHomePosition</AssemblyTitle>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <LangVersion>10</LangVersion>
     <TargetFramework>net472</TargetFramework>
@@ -14,6 +14,7 @@
     <GamePath Condition="Exists('C:\Program Files (x86)\Steam\steamapps\common\Resonite\')">C:\Program Files (x86)\Steam\steamapps\common\Resonite\</GamePath>
     <GamePath Condition="Exists('$(HOME)/.steam/steam/steamapps/common/Resonite/')">$(HOME)/.steam/steam/steamapps/common/Resonite/</GamePath>
     <GamePath Condition="Exists('E:\Programs\Steam\steamapps\common\Resonite')">E:\Programs\Steam\steamapps\common\Resonite\</GamePath>
+    <GamePath Condition="Exists('E:\SteamLibrary\steamapps\common\Resonite')">E:\SteamLibrary\steamapps\common\Resonite\</GamePath>
     <CopyLocal>false</CopyLocal>
     <CopyToMods Condition="'$(CopyToMods)'==''">true</CopyToMods>
     <DebugSymbols Condition="'$(Configuration)'=='Release'">false</DebugSymbols>
